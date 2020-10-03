@@ -1,0 +1,86 @@
+---
+version: '2'
+services:
+
+  # zookeeper container is used to manage our Apache environment, generally for a distributed system.
+  # Handles most of the config, registry, and fault tolerance setup
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_TICK_TIME: 2000
+    
+    #Here we expose various ports for other containers to connect to zookeeper mainly on port: 32181
+    expose:
+      - "2181"
+      - "2888"
+      - "32181"
+      - "3888"
+
+  #Kakfa is our distributed messaging queue that lets us produce messages into it and read messages out.
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+      
+    #We connect to zookeeper on port: 32181
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+    #Expose these ports for us to write to and read from Kafka
+    expose:
+      - "9092"
+      - "29092"
+
+  #This is our HDFS container that allows for more persistent storage
+  cloudera:
+    image: midsw205/cdh-minimal:latest
+
+    #We expose some ports for GUI look into our HDFS
+    expose:
+      - "8020" # nn
+      - "50070" # nn http
+      - "8888" # hue
+
+  #Spark container that gives us the framework to transform and query our data
+  spark:
+    image: midsw205/spark-python:0.0.5
+    stdin_open: true
+    tty: true
+
+    #Attach volumes so that we have access to the files and folders in ~/w205
+    volumes:
+      - ~/w205:/w205
+        #command: bash
+
+    depends_on:
+      - cloudera
+    environment:
+      HADOOP_NAMENODE: cloudera
+
+    #Exposing port:8890 and adding a firewall rule here for this port so that I can spin up Jupyter Notebook
+    #from docker
+    expose:
+    - "8890"
+
+    ports:
+    - "8890"
+    - "8890:8890"
+
+
+  #MIDS container that has many of the fundamental tools ready for us to use. Attaching volumes here as well
+  mids:
+    image: midsw205/base:latest
+    stdin_open: true
+    tty: true
+    volumes:
+      - ~/w205:/w205
+
+    expose:
+    - "8888"
+    ports:
+    - "8888:8888"
+
