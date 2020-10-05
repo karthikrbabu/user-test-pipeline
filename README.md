@@ -1,4 +1,4 @@
-# Project 2: Tracking User Activity
+# Tracking User Activity
 
 ### 07/02/2020 - Shyamkarthik Rameshbabu
 
